@@ -159,9 +159,19 @@ function renderFolderTree(groups,pf,depth){
     if(!col){if(groups[k])groups[k].forEach(function(p){html+=piH(p,depth)});html+=renderFolderTree(groups,k,depth+1)}});return html}
 function flClick(fn,ev){if(ev.target.classList.contains('fl-rename'))return;collapsed[curV+'_'+fn]=!collapsed[curV+'_'+fn];currentFolder=fn;rList()}
 
+/* Natural sort: handles "Problem2" before "Problem10" */
+function natCmp(a,b){var ax=a.problem_id||'',bx=b.problem_id||'';
+  return ax.localeCompare(bx,undefined,{numeric:true,sensitivity:'base'})}
+
+/* Natural sort: Problem2 < Problem10 */
+function natCmp(a,b){
+  var ax=a.problem_id||'',bx=b.problem_id||'';
+  return ax.localeCompare(bx,undefined,{numeric:true,sensitivity:'base'})}
+
 function rList(){
   rVW();var q=document.getElementById('sq').value.toLowerCase(),all=applyFilter(probs);
   var f=q?all.filter(function(p){return(p.problem_id||'').toLowerCase().indexOf(q)>=0||(p.answer||'').indexOf(q)>=0||(p.statement||'').toLowerCase().indexOf(q)>=0}):all;
+  f.sort(natCmp);
   var el=document.getElementById('slist');rBulk();
   if(curV===0){el.innerHTML=f.map(function(p){return piH(p,0)}).join('');focusRename();return}
   var groups={};
@@ -171,6 +181,8 @@ function rList(){
     if(curV===3){keys=splitField(t.difficulty);if(!keys.length)keys=['unknown']}
     if(curV===4){keys=t.custom.length?t.custom:['(none)']}
     keys.forEach(function(k){if(!groups[k])groups[k]=[];groups[k].push(p)})});
+  /* Sort within each group */
+  Object.keys(groups).forEach(function(k){groups[k].sort(natCmp)});
   if(curV===4){el.innerHTML=renderFolderTree(groups,null,0);focusRename();return}
   var sk=Object.keys(groups).sort(),html='';
   sk.forEach(function(k){var key=curV+'_'+k,col=collapsed[key];
@@ -181,8 +193,8 @@ function focusRename(){var ri=document.getElementById('rename-input');if(ri){ri.
 
 function piH(p,depth){
   var a=sel&&sel.problem_id===p.problem_id,m=multiSel.has(p.problem_id),dr=dragPid===p.problem_id,isCut=clipboard.mode==='cut'&&clipboard.pids.indexOf(p.problem_id)>=0,ind=depth?depth*18:0;
-  if(renaming&&renaming.type==='problem'&&renaming.pid===p.problem_id)return'<div class="pi'+(a?' on':'')+'" style="padding-left:'+(16+ind)+'px"><input type="checkbox" class="cb"><input class="pi-rename" id="rename-input" value="'+p.problem_id+'" data-old="'+esc(p.problem_id)+'" onkeydown="rnKey(event)" onblur="rnCommit()"><span class="inf">'+(p.answer||'')+' e'+(p.skeleton||[]).length+'</span></div>';
-  return'<div class="pi'+(a?' on':'')+(m?' sel-m':'')+(dr?' dragging':'')+(isCut?' cut-mark':'')+'" data-pid="'+p.problem_id+'" style="padding-left:'+(16+ind)+'px" onclick="pClick(\''+esc(p.problem_id)+'\',event)" oncontextmenu="ctxProblem(\''+esc(p.problem_id)+'\',event)"><input type="checkbox" class="cb" '+(m?'checked':'')+' onclick="cbClick(\''+esc(p.problem_id)+'\',event)"><span class="nm">'+p.problem_id+'</span><span class="inf">'+(p.answer?p.answer:'')+' e'+(p.skeleton||[]).length+'</span></div>'}
+  if(renaming&&renaming.type==='problem'&&renaming.pid===p.problem_id)return'<div class="pi'+(a?' on':'')+'" style="padding-left:'+(16+ind)+'px"><input type="checkbox" class="cb"><input class="pi-rename" id="rename-input" value="'+p.problem_id+'" data-old="'+esc(p.problem_id)+'" onkeydown="rnKey(event)" onblur="rnCommit()"></div>';
+  return'<div class="pi'+(a?' on':'')+(m?' sel-m':'')+(dr?' dragging':'')+(isCut?' cut-mark':'')+'" data-pid="'+p.problem_id+'" style="padding-left:'+(16+ind)+'px" onclick="pClick(\''+esc(p.problem_id)+'\',event)" oncontextmenu="ctxProblem(\''+esc(p.problem_id)+'\',event)"><input type="checkbox" class="cb" '+(m?'checked':'')+' onclick="cbClick(\''+esc(p.problem_id)+'\',event)"><span class="nm">'+p.problem_id+'</span></div>'}
 
 function startRename(type,id){renaming={type:type};if(type==='problem')renaming.pid=id;else renaming.name=id;rList()}
 function rnKey(ev){if(ev.key==='Enter'){ev.preventDefault();rnCommit()}if(ev.key==='Escape'){renaming=null;rList()}}
